@@ -162,25 +162,6 @@ def merge_networks(prefixes: set) -> dict:
             networks.update({(int(net.split("/")[1])): []})
         networks[int(net.split("/")[1])].append(net)
 
-    # Remove duplicated subnets
-
-    for outer_mask in sorted(networks.copy(), reverse=True):
-        evaluate_networks = networks[outer_mask]
-        for evaluate_network in evaluate_networks:
-            for inner_mask in sorted(networks.copy(), reverse=False):
-                if inner_mask >= outer_mask:
-                    break
-                for network in networks.copy()[inner_mask]:
-                    if evaluate_network == network:
-                        continue
-                    if ip_network(evaluate_network).subnet_of(ip_network(network)):
-                        # print(f"{evaluate_network} is a subnet of {network}")
-                        try:
-                            networks[outer_mask].remove(evaluate_network)
-                        except ValueError:
-                            # print(f"{evaluate_network} has already been removed.")
-                            pass
-
     # Merge Adjacent Subnets
 
     updates = True
@@ -201,6 +182,25 @@ def merge_networks(prefixes: set) -> dict:
                         networks.update({(int(supernet.split("/")[1])): [supernet]})
                     for sub in ip_network(network).supernet().subnets():
                         networks[mask].remove(str(sub))
+
+    # Remove duplicated subnets
+
+    for outer_mask in sorted(networks.copy(), reverse=True):
+        evaluate_networks = networks[outer_mask]
+        for evaluate_network in evaluate_networks:
+            for inner_mask in sorted(networks.copy(), reverse=False):
+                if inner_mask >= outer_mask:
+                    break
+                for network in networks.copy()[inner_mask]:
+                    if evaluate_network == network:
+                        continue
+                    if ip_network(evaluate_network).subnet_of(ip_network(network)):
+                        # print(f"{evaluate_network} is a subnet of {network}")
+                        try:
+                            networks[outer_mask].remove(evaluate_network)
+                        except ValueError:
+                            # print(f"{evaluate_network} has already been removed.")
+                            pass
 
     return networks
 
