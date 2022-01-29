@@ -1,3 +1,10 @@
+"""
+This code is property of Auspex Labs Inc.
+
+
+This script collects the advertised IP addresses from the top cloud providers and aggrigates it into a single file.
+"""
+
 import re
 import json
 from ipaddress import ip_network
@@ -14,12 +21,14 @@ OCEAN_SOURCE = "http://digitalocean.com/geo/google.csv"
 
 ORACLE_SOUCE = "https://docs.oracle.com/iaas/tools/public_ip_ranges.json"
 
+LINODE_SOURCE = "https://geoip.linode.com/"
+
 IPV4_FILE = "cloud_networks_4.json"
 
 IPV6_FILE = "cloud_networks_6.json"
 
 
-def aws(url=AWS_SOURCE):
+def aws(url: str = AWS_SOURCE) -> set:
 
     aws_ranges = json.loads(requests.get(url).content)
 
@@ -34,7 +43,7 @@ def aws(url=AWS_SOURCE):
     return aws_ipv4prefixes, aws_ipv6prefixes
 
 
-def azure(url=AZURE_SOURCE):
+def azure(url: str = AZURE_SOURCE) -> set:
 
     azure_address_page = requests.get(url)
 
@@ -56,7 +65,7 @@ def azure(url=AZURE_SOURCE):
     return az_ipv4prefixes, az_ipv6prefixes
 
 
-def gpc(url=GPC_SOURCE):
+def gpc(url: str = GPC_SOURCE) -> set:
 
     gpc_ranges = json.loads(requests.get(url).content)
 
@@ -69,10 +78,10 @@ def gpc(url=GPC_SOURCE):
         if prefix.get("ipv6Prefix") is not None:
             gpc_ipv6prefixes.add(ip_network(prefix.get("ipv6Prefix")))
 
-    return ipv4prefixes, ipv6prefixes
+    return gpc_ipv4prefixes, gpc_ipv6prefixes
 
 
-def ocean(url=OCEAN_SOURCE):
+def ocean(url: str = OCEAN_SOURCE) -> set:
 
     ocean_ranges = requests.get(url).content
 
@@ -91,14 +100,15 @@ def ocean(url=OCEAN_SOURCE):
     return do_ipv4prefixes, do_ipv6prefixes
 
 
-def oracle(url=ORACLE_SOUCE):
+def oracle(url: str = ORACLE_SOUCE) -> set:
 
     oracle_ranges = json.loads(requests.get(url).content)
 
     orc_ipv4prefixes = set()
     orc_ipv6prefixes = set()
 
-    for cidrs in oracle_ranges["regions"]:  # TODO Needs better variable names
+    # TODO Needs better variable names
+    for cidrs in oracle_ranges["regions"]:
         for cidr in cidrs["cidrs"]:
             net = ip_network(cidr["cidr"])
             if net.version == 4:
@@ -108,23 +118,51 @@ def oracle(url=ORACLE_SOUCE):
             else:
                 continue
 
-    return ipv4prefixes, ipv6prefixes
+    return orc_ipv4prefixes, orc_ipv6prefixes
 
 
-def merge_networks(prefixes):
+def linode(url: str = LINODE_SOURCE) -> set:
+
+    linode_ranges = requests.get(url).content
+
+    lin_ipv4prefixes = set()
+    lin_ipv6prefixes = set()
+
+    for prefix in linode_ranges.splitlines():
+        if prefix.decode("utf-8")[0] == "#":
+            continue
+
+        net = ip_network(prefix.decode("utf-8").split(",")[0])
+        if net.version == 4:
+            lin_ipv4prefixes.add(net)
+        elif net.version == 6:
+            lin_ipv6prefixes.add(net)
+        else:
+            continue
+
+    return lin_ipv4prefixes, lin_ipv6prefixes
+
+
+def merge_networks(prefixes: set) -> dict:
+    """
+    Find and merge adjacent CIDRs.
+
+    """
 
     cidr = list(prefixes)
     cidr.sort()
     cidr = [str(net) for net in cidr]
 
-    # Find and merge adjacent CIDRs.
-
     networks = dict()
 
+    # Populate Networks Dict.
+
     for net in cidr:
-        if int(net.split("/")[1]) not in networks.keys():
+        if int(net.split("/")[1]) not in networks:
             networks.update({(int(net.split("/")[1])): []})
         networks[int(net.split("/")[1])].append(net)
+
+    # Merge Adjacent Subnets
 
     updates = True
     while updates:
@@ -145,17 +183,37 @@ def merge_networks(prefixes):
                     for sub in ip_network(network).supernet().subnets():
                         networks[mask].remove(str(sub))
 
-    # net_count = 0
-    # for net in networks:
-    #     net_count += len(networks[net])
+    # Remove duplicated subnets
+
+    for outer_mask in sorted(networks.copy(), reverse=True):
+        evaluate_networks = networks[outer_mask]
+        for evaluate_network in evaluate_networks:
+            for inner_mask in sorted(networks.copy(), reverse=False):
+                if inner_mask >= outer_mask:
+                    break
+                for network in networks.copy()[inner_mask]:
+                    if evaluate_network == network:
+                        continue
+                    if ip_network(evaluate_network).subnet_of(ip_network(network)):
+                        # print(f"{evaluate_network} is a subnet of {network}")
+                        try:
+                            networks[outer_mask].remove(evaluate_network)
+                        except ValueError:
+                            # print(f"{evaluate_network} has already been removed.")
+                            pass
 
     return networks
 
 
-def write_networks(networks, network_file):
+def write_networks(networks: dict, network_file) -> None:
 
     with open(network_file, "w") as open_file:
-        json.dump(networks, open_file, indent=4, sort_keys=True)
+        try:
+            json.dump(networks, open_file, indent=4, sort_keys=True)
+        except:
+            pass
+
+    open_file.close()
 
 
 ipv4prefixes = set()
@@ -166,6 +224,7 @@ azure4, azure6 = azure()
 gpc4, gpc6 = gpc()
 ocean4, ocean6 = ocean()
 oracle4, oracle6 = oracle()
+linode4, linode6 = linode()
 
 ipv4prefixes.update(aws4)
 ipv4prefixes.update(azure4)
@@ -182,8 +241,5 @@ ipv6prefixes.update(oracle6)
 ipv4nets = merge_networks(ipv4prefixes)
 ipv6nets = merge_networks(ipv6prefixes)
 
-print(len(ipv4nets))
-
-
-# write_networks(ipv4nets, IPV4_FILE)
-# write_networks(ipv6nets, IPV6_FILE)
+write_networks(ipv4nets, IPV4_FILE)
+write_networks(ipv6nets, IPV6_FILE)
