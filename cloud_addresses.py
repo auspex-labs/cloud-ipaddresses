@@ -146,13 +146,13 @@ def linode(url: str = LINODE_SOURCE) -> set:
 def merge_networks(prefixes: set) -> dict:
     """
     Find and merge adjacent CIDRs.
-    
+
     """
 
     cidr = list(prefixes)
     cidr.sort()
     cidr = [str(net) for net in cidr]
-    
+
     networks = dict()
 
     # Populate Networks Dict.
@@ -168,7 +168,7 @@ def merge_networks(prefixes: set) -> dict:
         evaluate_networks = networks[outer_mask]
         for evaluate_network in evaluate_networks:
             for inner_mask in sorted(networks.copy(), reverse=False):
-                if inner_mask > outer_mask:
+                if inner_mask >= outer_mask:
                     break
                 for network in networks.copy()[inner_mask]:
                     if evaluate_network == network:
