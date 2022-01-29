@@ -123,8 +123,16 @@ def oracle(url: str = ORACLE_SOUCE) -> set:
 
 def linode(url: str = LINODE_SOURCE) -> set:
 
+    linode_ranges = requests.get(url).content
+
     lin_ipv4prefixes = set()
     lin_ipv6prefixes = set()
+
+    for prefix in linode_ranges.splitlines():
+        if prefix[0] == '#' or '':
+            continue
+        
+        net = ip_network(prefix.decode)
 
     return lin_ipv4prefixes, lin_ipv6prefixes
 
