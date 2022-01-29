@@ -177,10 +177,6 @@ def merge_networks(prefixes: set) -> dict:
                     for sub in ip_network(network).supernet().subnets():
                         networks[mask].remove(str(sub))
 
-    # net_count = 0
-    # for net in networks:
-    #     net_count += len(networks[net])
-
     return networks
 
 
@@ -220,8 +216,5 @@ ipv6prefixes.update(oracle6)
 ipv4nets = merge_networks(ipv4prefixes)
 ipv6nets = merge_networks(ipv6prefixes)
 
-print(len(ipv4nets))
-
-
-# write_networks(ipv4nets, IPV4_FILE)
-# write_networks(ipv6nets, IPV6_FILE)
+write_networks(ipv4nets, IPV4_FILE)
+write_networks(ipv6nets, IPV6_FILE)
