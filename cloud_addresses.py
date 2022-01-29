@@ -129,10 +129,16 @@ def linode(url: str = LINODE_SOURCE) -> set:
     lin_ipv6prefixes = set()
 
     for prefix in linode_ranges.splitlines():
-        if prefix[0] == '#' or '':
+        if prefix.decode("utf-8")[0] == "#":
             continue
-        
-        net = ip_network(prefix.decode)
+
+        net = ip_network(prefix.decode("utf-8").split(",")[0])
+        if net.version == 4:
+            lin_ipv4prefixes.add(net)
+        elif net.version == 6:
+            lin_ipv6prefixes.add(net)
+        else:
+            continue
 
     return lin_ipv4prefixes, lin_ipv6prefixes
 
