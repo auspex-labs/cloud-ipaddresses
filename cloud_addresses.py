@@ -158,7 +158,7 @@ def merge_networks(prefixes: set) -> dict:
     # Populate Networks Dict.
 
     for net in cidr:
-        if int(net.split("/")[1]) not in networks.keys():
+        if int(net.split("/")[1]) not in networks:
             networks.update({(int(net.split("/")[1])): []})
         networks[int(net.split("/")[1])].append(net)
 
