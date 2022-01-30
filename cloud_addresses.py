@@ -2,7 +2,7 @@
 This code is property of Auspex Labs Inc.
 
 
-This script collects the advertised IP addresses from the top cloud providers and aggrigates it into a single file.
+This script collects the advertised IP addresses from the top cloud providers and aggregates them into a single file.
 """
 
 import re
