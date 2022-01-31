@@ -222,7 +222,7 @@ def write_networks(networks: dict, network_file) -> None:
     with open(network_file, "w") as open_file:
         try:
             json.dump(networks, open_file, indent=4, sort_keys=True)
-        except:
+        except json.JSONDecodeError:
             pass
 
     open_file.close()
