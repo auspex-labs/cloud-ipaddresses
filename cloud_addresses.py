@@ -54,7 +54,10 @@ def azure(url: str = AZURE_SOURCE) -> set:
 
     for prefix in azure_ranges["values"]:
         for network in prefix["properties"]["addressPrefixes"]:
-            net = ip_network(network)
+            try:
+                net = ip_network(network)
+            except ValueError:
+                continue
             if net.version == 4:
                 az_ipv4prefixes.add(net)
             elif net.version == 6:
@@ -89,7 +92,10 @@ def ocean(url: str = OCEAN_SOURCE) -> set:
     do_ipv6prefixes = set()
 
     for prefix in ocean_ranges.splitlines():
-        net = ip_network(prefix.decode("utf-8").split(",")[0])
+        try:
+            net = ip_network(prefix.decode("utf-8").split(",")[0])
+        except ValueError:
+                continue
         if net.version == 4:
             do_ipv4prefixes.add(net)
         elif net.version == 6:
@@ -110,7 +116,10 @@ def oracle(url: str = ORACLE_SOUCE) -> set:
     # TODO Needs better variable names
     for cidrs in oracle_ranges["regions"]:
         for cidr in cidrs["cidrs"]:
-            net = ip_network(cidr["cidr"])
+            try:
+                net = ip_network(cidr["cidr"])
+            except ValueError:
+                continue
             if net.version == 4:
                 orc_ipv4prefixes.add(net)
             elif net.version == 6:
@@ -132,7 +141,10 @@ def linode(url: str = LINODE_SOURCE) -> set:
         if prefix.decode("utf-8")[0] == "#":
             continue
 
-        net = ip_network(prefix.decode("utf-8").split(",")[0])
+        try:
+            net = ip_network(prefix.decode("utf-8").split(",")[0])
+        except ValueError:
+                continue
         if net.version == 4:
             lin_ipv4prefixes.add(net)
         elif net.version == 6:
