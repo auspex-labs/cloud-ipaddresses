@@ -158,7 +158,7 @@ def linode(url: str = LINODE_SOURCE) -> set:
 
 def write_networks(networks: dict, network_file) -> None:
 
-    with open(network_file, "w") as open_file:
+    with open(network_file, "w", encoding='utf-8') as open_file:
         try:
             json.dump(networks, open_file, indent=4, sort_keys=True)
         except json.JSONDecodeError:
