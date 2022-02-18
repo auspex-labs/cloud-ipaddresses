@@ -5,8 +5,8 @@ This code is property of Auspex Labs Inc.
 This script collects the advertised IP addresses from the top cloud providers and aggregates them into a single file.
 """
 
-import re
 import json
+import re
 from ipaddress import ip_network, collapse_addresses
 import requests
 
@@ -94,7 +94,7 @@ def ocean(url: str = OCEAN_SOURCE) -> set:
         try:
             net = ip_network(prefix.decode("utf-8").split(",")[0])
         except ValueError:
-                continue
+            continue
         if net.version == 4:
             do_ipv4prefixes.add(net)
         elif net.version == 6:
@@ -143,7 +143,7 @@ def linode(url: str = LINODE_SOURCE) -> set:
         try:
             net = ip_network(prefix.decode("utf-8").split(",")[0])
         except ValueError:
-                continue
+            continue
         if net.version == 4:
             lin_ipv4prefixes.add(net)
         elif net.version == 6:
@@ -156,7 +156,7 @@ def linode(url: str = LINODE_SOURCE) -> set:
 
 def write_networks(networks: dict, network_file) -> None:
 
-    with open(network_file, "w") as open_file:
+    with open(network_file, "w", encoding='utf-8') as open_file:
         try:
             json.dump(networks, open_file, indent=4, sort_keys=True)
         except json.JSONDecodeError:
