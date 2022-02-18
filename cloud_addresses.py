@@ -7,8 +7,7 @@ This script collects the advertised IP addresses from the top cloud providers an
 
 import re
 import json
-from ipaddress import ip_network
-from netaddr import IPNetwork, cidr_merge
+from ipaddress import ip_network, collapse_addresses
 import requests
 
 AWS_SOURCE = "https://ip-ranges.amazonaws.com/ip-ranges.json"
@@ -188,14 +187,9 @@ ipv6prefixes.update(gpc6)
 ipv6prefixes.update(ocean6)
 ipv6prefixes.update(oracle6)
 
-ipv4list = []
-ipv6list = []
-for i in ipv4prefixes:
-    ipv4list.append(IPNetwork(str(i)))
-for i in ipv6prefixes:
-    ipv6list.append(IPNetwork(str(i)))
-ipv4nets = cidr_merge(ipv4list)
-ipv6nets = cidr_merge(ipv6list)
+ipv4nets = list(collapse_addresses(ipv4prefixes))
+ipv6nets = list(collapse_addresses(ipv6prefixes))
+
 ipv4nets = [str(i) for i in ipv4nets]
 ipv6nets = [str(i) for i in ipv6nets]
 
