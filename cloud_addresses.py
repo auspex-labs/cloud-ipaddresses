@@ -5,11 +5,12 @@ This code is property of Auspex Labs Inc.
 This script collects the advertised IP addresses from the top cloud providers and aggregates them into a single file.
 """
 
-import re
 import json
+import re
 from ipaddress import ip_network
-from netaddr import IPNetwork, cidr_merge
+
 import requests
+from netaddr import IPNetwork, cidr_merge
 
 AWS_SOURCE = "https://ip-ranges.amazonaws.com/ip-ranges.json"
 
@@ -95,7 +96,7 @@ def ocean(url: str = OCEAN_SOURCE) -> set:
         try:
             net = ip_network(prefix.decode("utf-8").split(",")[0])
         except ValueError:
-                continue
+            continue
         if net.version == 4:
             do_ipv4prefixes.add(net)
         elif net.version == 6:
@@ -144,7 +145,7 @@ def linode(url: str = LINODE_SOURCE) -> set:
         try:
             net = ip_network(prefix.decode("utf-8").split(",")[0])
         except ValueError:
-                continue
+            continue
         if net.version == 4:
             lin_ipv4prefixes.add(net)
         elif net.version == 6:
