@@ -8,7 +8,7 @@ This script collects the advertised IP addresses from the top cloud providers an
 import re
 import json
 from ipaddress import ip_network
-
+from netaddr import IPNetwork, cidr_merge
 import requests
 
 AWS_SOURCE = "https://ip-ranges.amazonaws.com/ip-ranges.json"
@@ -155,68 +155,6 @@ def linode(url: str = LINODE_SOURCE) -> set:
     return lin_ipv4prefixes, lin_ipv6prefixes
 
 
-def merge_networks(prefixes: set) -> dict:
-    """
-    Find and merge adjacent CIDRs.
-
-    """
-
-    cidr = list(prefixes)
-    cidr.sort()
-    cidr = [str(net) for net in cidr]
-
-    networks = dict()
-
-    # Populate Networks Dict.
-
-    for net in cidr:
-        if int(net.split("/")[1]) not in networks:
-            networks.update({(int(net.split("/")[1])): []})
-        networks[int(net.split("/")[1])].append(net)
-
-    # Merge Adjacent Subnets
-
-    updates = True
-    while updates:
-        updates = False
-        for mask in sorted(networks.copy(), reverse=False):
-            for network in networks[mask].copy():
-                complete = True
-                for sub in ip_network(network).supernet().subnets():
-                    if str(sub) not in networks[mask]:
-                        complete = False
-                if complete:
-                    updates = True
-                    supernet = str(ip_network(network).supernet())
-                    if int(supernet.split("/")[1]) in networks:
-                        networks[int(supernet.split("/")[1])].append(supernet)
-                    else:
-                        networks.update({(int(supernet.split("/")[1])): [supernet]})
-                    for sub in ip_network(network).supernet().subnets():
-                        networks[mask].remove(str(sub))
-
-    # Remove duplicated subnets
-
-    for outer_mask in sorted(networks.copy(), reverse=True):
-        evaluate_networks = networks[outer_mask]
-        for evaluate_network in evaluate_networks:
-            for inner_mask in sorted(networks.copy(), reverse=False):
-                if inner_mask >= outer_mask:
-                    break
-                for network in networks.copy()[inner_mask]:
-                    if evaluate_network == network:
-                        continue
-                    if ip_network(evaluate_network).subnet_of(ip_network(network)):
-                        # print(f"{evaluate_network} is a subnet of {network}")
-                        try:
-                            networks[outer_mask].remove(evaluate_network)
-                        except ValueError:
-                            # print(f"{evaluate_network} has already been removed.")
-                            pass
-
-    return networks
-
-
 def write_networks(networks: dict, network_file) -> None:
 
     with open(network_file, "w") as open_file:
@@ -250,8 +188,16 @@ ipv6prefixes.update(gpc6)
 ipv6prefixes.update(ocean6)
 ipv6prefixes.update(oracle6)
 
-ipv4nets = merge_networks(ipv4prefixes)
-ipv6nets = merge_networks(ipv6prefixes)
+ipv4list = []
+ipv6list = []
+for i in ipv4prefixes:
+    ipv4list.append(IPNetwork(str(i)))
+for i in ipv6prefixes:
+    ipv6list.append(IPNetwork(str(i)))
+ipv4nets = cidr_merge(ipv4list)
+ipv6nets = cidr_merge(ipv6list)
+ipv4nets = [str(i) for i in ipv4nets]
+ipv6nets = [str(i) for i in ipv6nets]
 
 write_networks(ipv4nets, IPV4_FILE)
 write_networks(ipv6nets, IPV6_FILE)
