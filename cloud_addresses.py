@@ -1,5 +1,17 @@
 """
-This code is property of Auspex Labs Inc.
+Copyright 2024 Auspex Labs Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 
 This script collects the advertised IP addresses from the top cloud providers and aggregates them into a single file.
@@ -27,7 +39,7 @@ IPV4_FILE = "cloud_networks_4.json"
 IPV6_FILE = "cloud_networks_6.json"
 
 
-def aws(url: str = AWS_SOURCE) -> set:
+def aws(url: str = AWS_SOURCE):
 
     aws_ranges = json.loads(requests.get(url).content)
 
@@ -42,7 +54,7 @@ def aws(url: str = AWS_SOURCE) -> set:
     return aws_ipv4prefixes, aws_ipv6prefixes
 
 
-def azure(url: str = AZURE_SOURCE) -> set:
+def azure(url: str = AZURE_SOURCE):
 
     azure_address_page = requests.get(url)
 
@@ -67,7 +79,7 @@ def azure(url: str = AZURE_SOURCE) -> set:
     return az_ipv4prefixes, az_ipv6prefixes
 
 
-def gpc(url: str = GPC_SOURCE) -> set:
+def gpc(url: str = GPC_SOURCE):
 
     gpc_ranges = json.loads(requests.get(url).content)
 
@@ -83,7 +95,7 @@ def gpc(url: str = GPC_SOURCE) -> set:
     return gpc_ipv4prefixes, gpc_ipv6prefixes
 
 
-def ocean(url: str = OCEAN_SOURCE) -> set:
+def ocean(url: str = OCEAN_SOURCE):
 
     ocean_ranges = requests.get(url).content
 
@@ -105,7 +117,7 @@ def ocean(url: str = OCEAN_SOURCE) -> set:
     return do_ipv4prefixes, do_ipv6prefixes
 
 
-def oracle(url: str = ORACLE_SOUCE) -> set:
+def oracle(url: str = ORACLE_SOUCE):
 
     oracle_ranges = json.loads(requests.get(url).content)
 
@@ -129,7 +141,7 @@ def oracle(url: str = ORACLE_SOUCE) -> set:
     return orc_ipv4prefixes, orc_ipv6prefixes
 
 
-def linode(url: str = LINODE_SOURCE) -> set:
+def linode(url: str = LINODE_SOURCE):
 
     linode_ranges = requests.get(url).content
 
@@ -154,7 +166,7 @@ def linode(url: str = LINODE_SOURCE) -> set:
     return lin_ipv4prefixes, lin_ipv6prefixes
 
 
-def write_networks(networks: dict, network_file) -> None:
+def write_networks(networks, network_file) -> None:
 
     with open(network_file, "w", encoding='utf-8') as open_file:
         try:
