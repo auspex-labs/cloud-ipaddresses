@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Payload
+cloud_networks_4.json
+cloud_networks_6.json

@@ -58,7 +58,7 @@ def azure(url: str = AZURE_SOURCE):
 
     azure_address_page = requests.get(url)
 
-    azure_ranges = json.loads(requests.get(re.findall(r"https://download.*?\.json", azure_address_page.text)[0]).content)
+    azure_ranges = json.loads(requests.get(re.findall(r"https://download.microsoft.com/download/*?\.json", azure_address_page.text)[0]).content)
 
     az_ipv4prefixes = set()
     az_ipv6prefixes = set()
