@@ -77,7 +77,10 @@ def fetch_azure_ip_ranges(url: str):
         return ipv4prefixes, ipv6prefixes
     json_url = re.search(r"https://download.microsoft.com/download/.*?\.json", download_page)
     if json_url:
-        response = requests.get(json_url.group(), timeout=10).json()
+        try:
+            response = requests.get(json_url.group(), timeout=10).json()
+        except TimeoutError:
+            return ipv4prefixes, ipv6prefixes
         for value in response.get("values", []):
             for ip_range in value.get("properties", {}).get("addressPrefixes", []):
                 try:
@@ -103,7 +106,11 @@ def fetch_gcp_ip_ranges(url: str):
             ipv6prefixes (set): A set of IPv6 prefixes.
 
     """
-    response = requests.get(url, timeout=10).json()
+    try:
+        response = requests.get(url, timeout=10).json()
+    except TimeoutError:
+        return set(), set()
+
     ipv4prefixes = {ip_network(prefix["ipv4Prefix"]) for prefix in response.get("prefixes", []) if "ipv4Prefix" in prefix}
     ipv6prefixes = {ip_network(prefix["ipv6Prefix"]) for prefix in response.get("prefixes", []) if "ipv6Prefix" in prefix}
     return ipv4prefixes, ipv6prefixes
@@ -120,8 +127,14 @@ def fetch_digital_ocean_ip_ranges(url: str):
             ipv4prefixes (set): A set of IPv4 prefixes.
             ipv6prefixes (set): A set of IPv6 prefixes.
     """
-    response: list = requests.get(url, timeout=10).text.splitlines()
+
     ipv4prefixes, ipv6prefixes = set(), set()
+
+    try:
+        response: list = requests.get(url, timeout=10).text.splitlines()
+    except TimeoutError:
+        return ipv4prefixes, ipv6prefixes
+    
     for line in response:
         parts: list = line.split(",")
         try:
@@ -146,8 +159,14 @@ def fetch_oracle_ip_ranges(url: str):
             ipv4prefixes (set): A set of IPv4 prefixes.
             ipv6prefixes (set): A set of IPv6 prefixes.
     """
-    response = requests.get(url, timeout=10).json()
+
     ipv4prefixes, ipv6prefixes = set(), set()
+
+    try:
+        response = requests.get(url, timeout=10).json()
+    except TimeoutError:
+        return ipv4prefixes, ipv6prefixes
+    
     for region in response.get("regions", []):
         for cidr in region.get("cidrs", []):
             try:
@@ -173,8 +192,14 @@ def linode_ip_ranges(url: str):
             ipv6prefixes (set): A set of IPv6 prefixes.
 
     """
-    response: str = requests.get(url).text
+    
     ipv4prefixes, ipv6prefixes = set(), set()
+    
+    try:
+        response: str = requests.get(url, timeout=10).text
+    except TimeoutError:
+        return ipv4prefixes, ipv6prefixes
+    
     for line in response.splitlines():
         if not line.startswith("#"):
             try:
@@ -218,17 +243,13 @@ def main():
 
     ipv4p = aws4.union(azure4, gcp4, ocean4, oracle4, linode4)
     ipv6p = aws6.union(azure6, gcp6, ocean6, oracle6, linode6)
-    print("Total", len(ipv4p), len(ipv6p))
 
-
-    ipv4nets = list(collapse_addresses(ipv4p))
-    ipv6nets = list(collapse_addresses(ipv6p))
-    print("Collapsed", len(ipv4nets), len(ipv6nets))
-    
+    ipv4nets = list(collapse_addresses(ipv4p)) # type: ignore
+    ipv6nets = list(collapse_addresses(ipv6p)) # type: ignore
 
     ipv4nets = [str(i) for i in ipv4nets]
     ipv6nets = [str(i) for i in ipv6nets]
-    print("Final", len(ipv4nets), len(ipv6nets))
+    print("Total", len(ipv4nets), len(ipv6nets))
 
     write_networks(ipv4nets, IPV4_FILE)
     write_networks(ipv6nets, IPV6_FILE)
