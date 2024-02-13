@@ -14,13 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-This script collects the advertised IP addresses from the top cloud providers and aggregates them into separate files for IPv4 and IPv6 addresses.
+This script collects the advertised IP addresses from the cloud providers and aggregates them into separate files for IPv4 and IPv6 addresses.
 """
 
 import json
 import re
 from ipaddress import ip_network, collapse_addresses
 import requests
+
+# User Agent String for Microsoft Azure
+
+AZURE_HEADER = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0"
+}
 
 # Cloud providers' IP ranges sources
 AWS_SOURCE = "https://ip-ranges.amazonaws.com/ip-ranges.json"
@@ -55,7 +61,7 @@ def fetch_aws_ip_ranges(url: str):
 def fetch_azure_ip_ranges(url: str):
     """
     Fetches IP ranges from Azure by first navigating the download page to find the actual JSON file URL.
-    
+
         Args:
             url (str): The URL to the download page.
 
@@ -63,11 +69,15 @@ def fetch_azure_ip_ranges(url: str):
             ipv4prefixes (set): A set of IPv4 prefixes.
             ipv6prefixes (set): A set of IPv6 prefixes.
     """
-    download_page: str = requests.get(url, timeout=10).text
+    ipv4prefixes, ipv6prefixes = set(), set()
+
+    try:
+        download_page: str = requests.get(url, headers=AZURE_HEADER, timeout=10).text
+    except TimeoutError:
+        return ipv4prefixes, ipv6prefixes
     json_url = re.search(r"https://download.microsoft.com/download/.*?\.json", download_page)
     if json_url:
         response = requests.get(json_url.group(), timeout=10).json()
-        ipv4prefixes, ipv6prefixes = set(), set()
         for value in response.get("values", []):
             for ip_range in value.get("properties", {}).get("addressPrefixes", []):
                 try:
@@ -87,16 +97,17 @@ def fetch_gcp_ip_ranges(url: str):
 
         Args:
             url (str): The URL to the JSON file containing the IP ranges.
-        
+
         Returns:
             ipv4prefixes (set): A set of IPv4 prefixes.
             ipv6prefixes (set): A set of IPv6 prefixes.
-        
+
     """
     response = requests.get(url, timeout=10).json()
     ipv4prefixes = {ip_network(prefix["ipv4Prefix"]) for prefix in response.get("prefixes", []) if "ipv4Prefix" in prefix}
     ipv6prefixes = {ip_network(prefix["ipv6Prefix"]) for prefix in response.get("prefixes", []) if "ipv6Prefix" in prefix}
     return ipv4prefixes, ipv6prefixes
+
 
 def fetch_digital_ocean_ip_ranges(url: str):
     """
@@ -127,10 +138,10 @@ def fetch_digital_ocean_ip_ranges(url: str):
 def fetch_oracle_ip_ranges(url: str):
     """
     Fetches IP ranges from Oracle.
-    
+
         Args:
             url (str): The URL to the JSON file containing the IP ranges.
-        
+
         Returns:
             ipv4prefixes (set): A set of IPv4 prefixes.
             ipv6prefixes (set): A set of IPv6 prefixes.
@@ -150,67 +161,77 @@ def fetch_oracle_ip_ranges(url: str):
     return ipv4prefixes, ipv6prefixes
 
 
-def fetch_linode_ip_ranges(url: str):
+def linode_ip_ranges(url: str):
     """
     Fetches IP ranges from Linode.
-    
+
         Args:
             url (str): The URL to the JSON file containing the IP ranges.
 
         Returns:
             ipv4prefixes (set): A set of IPv4 prefixes.
             ipv6prefixes (set): A set of IPv6 prefixes.
-    
+
     """
-    response: list = requests.get(url, timeout=10).text.splitlines()
+    response: str = requests.get(url).text
     ipv4prefixes, ipv6prefixes = set(), set()
-    for line in response:
-        if line.startswith("#"):
-            continue
-        try:
-            network = ip_network(line.split(",")[0])
-            if network.version == 4:
-                ipv4prefixes.add(network)
+    for line in response.splitlines():
+        if not line.startswith("#"):
+            try:
+                network = ip_network(line.split(",")[0], strict=False)
+                if network.version == 4:
+                    ipv4prefixes.add(network)
+                elif network.version == 6:
+                    ipv6prefixes.add(network)
+            except ValueError:
+                continue
+    return ipv4prefixes, ipv6prefixes
 
 
-def write_networks(networks, network_file) -> None:
+def write_networks(networks: list, network_file: str) -> None:
+    """
+    Writes the network addresses to a file in JSON format.
 
-    with open(network_file, "w", encoding='utf-8') as open_file:
-        try:
-            json.dump(networks, open_file, indent=4, sort_keys=True)
-        except json.JSONDecodeError:
-            pass
+        Args:
+            networks (list): A list of network addresses.
+            network_file (str): The name of the file to write to.
 
-    open_file.close()
+        Returns:
+            None
+    """
+    with open(network_file, "w", encoding="utf-8") as file:
+        json.dump(networks, file, indent=4)
+        
+def main():
+    aws4, aws6 = fetch_aws_ip_ranges(AWS_SOURCE)
+    print("AWS", len(aws4), len(aws6))
+    azure4, azure6 = fetch_azure_ip_ranges(AZURE_DOWNLOAD_PAGE)
+    print("Azure", len(azure4), len(azure6))
+    gcp4, gcp6 = fetch_gcp_ip_ranges(GPC_SOURCE)
+    print("GCP", len(gcp4), len(gcp6))
+    ocean4, ocean6 = fetch_digital_ocean_ip_ranges(OCEAN_SOURCE)
+    print("DigitalOcean", len(ocean4), len(ocean6))
+    oracle4, oracle6 = fetch_oracle_ip_ranges(ORACLE_SOURCE)
+    print("Oracle", len(oracle4), len(oracle6))
+    linode4, linode6 = linode_ip_ranges(LINODE_SOURCE)
+    print("Linode", len(linode4), len(linode6))
+
+    ipv4p = aws4.union(azure4, gcp4, ocean4, oracle4, linode4)
+    ipv6p = aws6.union(azure6, gcp6, ocean6, oracle6, linode6)
+    print("Total", len(ipv4p), len(ipv6p))
 
 
-# ipv4prefixes = set()
-# ipv6prefixes = set()
+    ipv4nets = list(collapse_addresses(ipv4p))
+    ipv6nets = list(collapse_addresses(ipv6p))
+    print("Collapsed", len(ipv4nets), len(ipv6nets))
+    
 
-# aws4, aws6 = aws()
-# azure4, azure6 = azure()
-# gpc4, gpc6 = gpc()
-# ocean4, ocean6 = ocean()
-# oracle4, oracle6 = oracle()
-# linode4, linode6 = linode()
+    ipv4nets = [str(i) for i in ipv4nets]
+    ipv6nets = [str(i) for i in ipv6nets]
+    print("Final", len(ipv4nets), len(ipv6nets))
 
-# ipv4prefixes.update(aws4)
-# ipv4prefixes.update(azure4)
-# ipv4prefixes.update(gpc4)
-# ipv4prefixes.update(ocean4)
-# ipv4prefixes.update(oracle4)
+    write_networks(ipv4nets, IPV4_FILE)
+    write_networks(ipv6nets, IPV6_FILE)
 
-# ipv6prefixes.update(aws6)
-# ipv6prefixes.update(azure6)
-# ipv6prefixes.update(gpc6)
-# ipv6prefixes.update(ocean6)
-# ipv6prefixes.update(oracle6)
-
-# ipv4nets = list(collapse_addresses(ipv4prefixes))
-# ipv6nets = list(collapse_addresses(ipv6prefixes))
-
-# ipv4nets = [str(i) for i in ipv4nets]
-# ipv6nets = [str(i) for i in ipv6nets]
-
-# write_networks(ipv4nets, IPV4_FILE)
-# write_networks(ipv6nets, IPV6_FILE)
+if __name__ == "__main__":
+    main()
