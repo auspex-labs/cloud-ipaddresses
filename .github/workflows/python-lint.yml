@@ -46,7 +46,7 @@ jobs:
           git config --global user.name "Auspex Automatic"
           git config --global user.email "contact@auspex-labs.com"
           git add .
-          git commit -m "Apply automatic code formatting (ruff + black)"
+          git commit -m "Apply automatic code formatting"
           git push origin HEAD:${{ github.head_ref || github.ref_name }}
         else
           echo "No formatting changes needed"
