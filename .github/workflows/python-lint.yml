@@ -21,6 +21,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref || github.ref_name }}
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -45,7 +47,7 @@ jobs:
           git config --global user.email "contact@auspex-labs.com"
           git add .
           git commit -m "Apply automatic code formatting (ruff + black)"
-          git push
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}
         else
           echo "No formatting changes needed"
         fi
