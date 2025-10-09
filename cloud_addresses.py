@@ -4,7 +4,7 @@ This module collects and aggregates advertised IP address ranges from major
 cloud providers (AWS, Azure, GCP, DigitalOcean, Oracle, Linode) and outputs
 them as separate JSON files for IPv4 and IPv6 addresses.
 
-Copyright 2024 Auspex Labs Inc.
+Copyright 2024 - 2025 Auspex Labs Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
