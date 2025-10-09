@@ -47,7 +47,7 @@ MAX_RETRIES = 3
 RETRY_BACKOFF_BASE = 2  # Exponential backoff base in seconds.
 
 
-def retry_request(url: str, headers = None, timeout: int = 10) -> requests.Response:
+def retry_request(url: str, headers=None, timeout: int = 10) -> requests.Response:
     """Makes an HTTP GET request with exponential backoff retry logic.
 
     Args:
@@ -71,13 +71,13 @@ def retry_request(url: str, headers = None, timeout: int = 10) -> requests.Respo
         except requests.RequestException as err:
             last_exception = err
             if attempt < MAX_RETRIES - 1:
-                wait_time = RETRY_BACKOFF_BASE ** attempt
+                wait_time = RETRY_BACKOFF_BASE**attempt
                 print(f"Retry {attempt + 1}/{MAX_RETRIES} for {url} after {wait_time}s: {err}")
                 time.sleep(wait_time)
             else:
                 print(f"All {MAX_RETRIES} retry attempts failed for {url}")
 
-    raise last_exception # type: ignore
+    raise last_exception  # type: ignore
 
 
 def fetch_aws_ip_ranges(url: str) -> tuple:
