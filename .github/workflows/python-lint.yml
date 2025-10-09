@@ -1,0 +1,51 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main]
+    paths:
+      - "requirements.txt"
+      - "**/*.py"
+  pull_request:
+    branches: "**"
+    paths:
+      - "requirements.txt"
+      - "**/*.py"
+
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff black
+
+    - name: Run ruff
+      run: ruff check . --fix
+
+    - name: Run black
+      run: black -l 132 -t py312 .
+
+    - name: Commit changes
+      run: |
+        if [[ -n $(git status --porcelain) ]]; then
+          git config --global user.name "Auspex Automatic"
+          git config --global user.email "contact@auspex-labs.com"
+          git add .
+          git commit -m "Apply automatic code formatting (ruff + black)"
+          git push
+        else
+          echo "No formatting changes needed"
+        fi
