@@ -22,7 +22,8 @@ limitations under the License.
 import json
 import re
 import time
-from ipaddress import ip_network, collapse_addresses
+from ipaddress import collapse_addresses, ip_network
+
 import requests
 
 # User Agent String for Microsoft Azure (required for download page access).
